@@ -1,20 +1,44 @@
 # WoW Forever Profession Companion
 
-WoW Forever Profession Companion is a planned application for profession progression and auction house analysis. It will use profession requirements, recipe data, market prices, and character-specific skill and inventory information to generate leveling recommendations and calculate crafting profitability.
+WoW Forever Profession Companion is an application in development
+for profession progression and auction house analysis.
+
+It combines profession reference data, market prices, character
+skills, and inventory information to support informed decisions
+about profession leveling and material profitability.
 
 ## Planned Features
 
-- Profession progression plans based on speed, cost, or a balance of both
+- Profession progression plans based on speed, economy, or a balance of both
 - Profession training and gathering requirements
 - Current auction house prices and seven-day price history
-- Crafting profitability and material opportunity cost calculations
-- Raw and processed material price comparisons
+- Processing profitability and material opportunity cost calculations
+- Market opportunity discovery
 - Multiple character profiles with individual profession and inventory tracking
+- Persistent manual profession reference data
 
-Initial support will cover Mining (including Smelting) and Herbalism on the US Normal Alliance market.
+Initial support will cover Mining (including Smelting) and
+Herbalism on the US Normal Alliance market.
+
+## Technology Stack
+
+- Java 25 and Spring Boot
+- Angular, TypeScript, and SCSS
+- PostgreSQL and Flyway
+- Maven
+- Docker Compose
+- GitHub Actions
 
 ## Project Status
 
-The project is in the planning and technical feasibility stage. Data sources are being evaluated for accuracy, coverage, reliability, and usage restrictions. Application development has not yet started.
+Application development is underway. The initial development
+milestone focuses on application infrastructure, persistence,
+logging, diagnostics, security, and automated testing.
 
-This is an independent, non-commercial project and is not affiliated with Blizzard Entertainment.
+Installation and configuration instructions will be added as
+the application becomes operational.
+
+## Disclaimer
+
+This is an independent, non-commercial project and is not
+affiliated with Blizzard Entertainment.

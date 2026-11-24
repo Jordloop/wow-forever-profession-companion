@@ -1,6 +1,33 @@
-
 # Private project documentation
 /docs/private/
+/docs.zip
+/private*.zip
 
-# Private project documentation
-/docs/private/
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+
+# Java and Maven
+/backend/target/
+*.class
+
+# Angular and Node.js
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.angular/
+/frontend/coverage/
+
+# IDE configuration
+.idea/
+.vscode/
+*.iml
+
+# Logs and diagnostics
+*.log
+/logs/
+/diagnostics/
+
+# Operating system files
+.DS_Store
+Thumbs.db
