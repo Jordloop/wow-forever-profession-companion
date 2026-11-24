@@ -55,7 +55,9 @@ the file. API responses include a server-generated `X-Correlation-ID`; the
 same ID is included in application log context. Health, build information,
 and metrics are served on loopback port 8082 under `/actuator/health`,
 `/actuator/info`, and `/actuator/metrics`. Health component details are
-hidden.
+hidden. API failures use RFC 9457 Problem Details with a correlation ID;
+validation responses omit rejected values, and unexpected errors return
+sanitized details. The frontend displays safe guidance and the diagnostic ID.
 
 ## Disclaimer
 

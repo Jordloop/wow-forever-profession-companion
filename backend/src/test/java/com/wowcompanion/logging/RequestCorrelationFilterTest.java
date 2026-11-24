@@ -38,11 +38,11 @@ class RequestCorrelationFilterTest {
             String correlationId = response.getHeader(RequestCorrelationFilter.CORRELATION_ID_HEADER);
             assertNotNull(correlationId);
             assertNotEquals("caller-supplied-value", correlationId);
-            assertEquals(correlationId, MDC.get("correlationId"));
+            assertEquals(correlationId, MDC.get(RequestCorrelationFilter.CORRELATION_ID_MDC_KEY));
             UUID.fromString(correlationId);
         });
 
-        assertNull(MDC.get("correlationId"));
+        assertNull(MDC.get(RequestCorrelationFilter.CORRELATION_ID_MDC_KEY));
     }
 
     @Test
@@ -55,7 +55,7 @@ class RequestCorrelationFilterTest {
                     throw new ServletException("expected test failure");
                 }));
 
-        assertNull(MDC.get("correlationId"));
+        assertNull(MDC.get(RequestCorrelationFilter.CORRELATION_ID_MDC_KEY));
     }
 
     @Test
@@ -81,7 +81,7 @@ class RequestCorrelationFilterTest {
         assertEquals(1, appender.list.size());
         ILoggingEvent event = appender.list.get(0);
         assertEquals("HTTP request completed with status 200", event.getFormattedMessage());
-        assertNotNull(event.getMDCPropertyMap().get("correlationId"));
-        UUID.fromString(event.getMDCPropertyMap().get("correlationId"));
+        assertNotNull(event.getMDCPropertyMap().get(RequestCorrelationFilter.CORRELATION_ID_MDC_KEY));
+        UUID.fromString(event.getMDCPropertyMap().get(RequestCorrelationFilter.CORRELATION_ID_MDC_KEY));
     }
 }

@@ -16,7 +16,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Component
 public final class RequestCorrelationFilter extends OncePerRequestFilter {
     public static final String CORRELATION_ID_HEADER = "X-Correlation-ID";
-    private static final String MDC_KEY = "correlationId";
+    public static final String CORRELATION_ID_MDC_KEY = "correlationId";
     private static final Logger logger = LoggerFactory.getLogger(RequestCorrelationFilter.class);
 
     @Override
@@ -24,9 +24,9 @@ public final class RequestCorrelationFilter extends OncePerRequestFilter {
             HttpServletRequest request,
             HttpServletResponse response,
             FilterChain filterChain) throws ServletException, IOException {
-        String previousCorrelationId = MDC.get(MDC_KEY);
+        String previousCorrelationId = MDC.get(CORRELATION_ID_MDC_KEY);
         String correlationId = UUID.randomUUID().toString();
-        MDC.put(MDC_KEY, correlationId);
+        MDC.put(CORRELATION_ID_MDC_KEY, correlationId);
         response.setHeader(CORRELATION_ID_HEADER, correlationId);
 
         try {
@@ -34,9 +34,9 @@ public final class RequestCorrelationFilter extends OncePerRequestFilter {
         } finally {
             logger.debug("HTTP request completed with status {}", response.getStatus());
             if (previousCorrelationId == null) {
-                MDC.remove(MDC_KEY);
+                MDC.remove(CORRELATION_ID_MDC_KEY);
             } else {
-                MDC.put(MDC_KEY, previousCorrelationId);
+                MDC.put(CORRELATION_ID_MDC_KEY, previousCorrelationId);
             }
         }
     }

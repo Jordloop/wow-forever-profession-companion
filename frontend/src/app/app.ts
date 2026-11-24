@@ -2,10 +2,11 @@ import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { ApplicationContext } from './core/application-context';
 import { workspaces } from './core/workspaces';
+import { ErrorNoticeComponent } from './shared/error-notice';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [RouterLink, RouterLinkActive, RouterOutlet, ErrorNoticeComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
