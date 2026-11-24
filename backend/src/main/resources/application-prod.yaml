@@ -1,0 +1,6 @@
+logging:
+  file:
+    name: ${LOG_FILE:/app/logs/profession-companion.log}
+  structured:
+    format:
+      console: logstash
