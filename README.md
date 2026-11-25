@@ -59,6 +59,30 @@ hidden. API failures use RFC 9457 Problem Details with a correlation ID;
 validation responses omit rejected values, and unexpected errors return
 sanitized details. The frontend displays safe guidance and the diagnostic ID.
 
+## Request security
+
+The backend permits unauthenticated access for the approved personal,
+localhost-only MVP; it does not add login or user management. State-changing
+requests require a valid CSRF token and an allowed `Origin`. The backend issues
+the Angular-readable `XSRF-TOKEN` cookie with path `/` and `SameSite=Strict`;
+Angular's `HttpClient` sends it as `X-XSRF-TOKEN` for same-origin relative API
+requests. Security failures return sanitized RFC 9457 responses with a
+correlation ID.
+
+Development allows only the configured Angular dev-server origins
+`http://localhost:4200` and `http://127.0.0.1:4200` in addition to the request's
+own origin. The `prod` profile removes those development exceptions and accepts
+only the request's same origin. Do not enable wildcard CORS or add cross-origin
+production access. The approved production deployment serves the Angular assets
+and API from the same origin; keep its published app and database ports
+loopback-only.
+
+There are no production write endpoints yet. The security integration tests
+use test-only routes. Future API reads should establish the CSRF cookie before
+the first write; keep writes on unsafe HTTP methods and use Angular's
+`HttpClient` with relative URLs so its XSRF support applies. Do not disable CSRF
+for API routes.
+
 ## Disclaimer
 
 This is an independent, non-commercial project and is not

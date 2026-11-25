@@ -4,3 +4,6 @@ logging:
   structured:
     format:
       console: logstash
+app:
+  security:
+    development-proxy-origins: []

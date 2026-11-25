@@ -11,6 +11,11 @@ spring:
     open-in-view: false
   flyway:
     enabled: true
+app:
+  security:
+    development-proxy-origins:
+      - http://localhost:4200
+      - http://127.0.0.1:4200
 server:
   address: ${SERVER_ADDRESS:127.0.0.1}
   port: ${SERVER_PORT:8081}
