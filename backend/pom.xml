@@ -105,7 +105,7 @@
                         <artifactId>dependency-check-maven</artifactId>
                         <version>12.2.2</version>
                         <configuration>
-                            <dataDirectory>${user.home}/.m2/repository/dependency-check-data</dataDirectory>
+                            <dataDirectory>${user.home}/.m2/dependency-check-data</dataDirectory>
                             <!-- Keep unauthenticated NVD requests below the API rate limit. -->
                             <nvdApiDelay>7000</nvdApiDelay>
                             <failBuildOnCVSS>7.0</failBuildOnCVSS>

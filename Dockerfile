@@ -10,9 +10,14 @@ FROM eclipse-temurin:25-jdk-alpine AS backend-build
 
 RUN apk add --no-cache unzip
 WORKDIR /workspace
-COPY backend/ backend/
+COPY scripts/retry-maven.sh scripts/retry-maven.sh
+COPY backend/mvnw backend/mvnw
+COPY backend/.mvn/ backend/.mvn/
+COPY backend/pom.xml backend/pom.xml
+RUN sh scripts/retry-maven.sh ./backend/mvnw -B -f backend/pom.xml -DskipTests dependency:go-offline
+COPY backend/src/ backend/src/
 COPY --from=frontend-build /workspace/frontend/dist/frontend/browser/ backend/src/main/resources/static/
-RUN ./backend/mvnw -B -f backend/pom.xml -DskipTests package
+RUN sh scripts/retry-maven.sh ./backend/mvnw -B -f backend/pom.xml -DskipTests package
 
 FROM eclipse-temurin:25-jre-alpine AS runtime
 
