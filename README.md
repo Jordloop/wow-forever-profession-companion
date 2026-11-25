@@ -83,6 +83,22 @@ the first write; keep writes on unsafe HTTP methods and use Angular's
 `HttpClient` with relative URLs so its XSRF support applies. Do not disable CSRF
 for API routes.
 
+## Browser tests
+
+From `frontend`, install the Chromium browser once and run the Playwright
+end-to-end suite:
+
+```powershell
+npm ci
+npx playwright install chromium
+npm run test:e2e
+```
+
+The test runner starts and stops its own Angular development server on
+`127.0.0.1:4317`. The browser tests cover workspace navigation, direct route
+loads and the current disabled placeholder controls; they use no backend,
+provider or live account data.
+
 ## Run with Docker Compose
 
 Docker Engine and Docker Compose v2 are required. If `.env` does not already
