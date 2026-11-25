@@ -1,0 +1,24 @@
+<a class="skip-link" href="#workspace">Skip to workspace</a>
+<aside>
+  <div class="brand">Profession Companion</div>
+  <div class="subtitle">WoW Forever</div>
+  <nav aria-label="Workspaces">
+    @for (group of groups; track group) {
+      <h2>{{ group }}</h2>
+      @for (workspace of workspaces; track workspace.path) {
+        @if (workspace.group === group) {
+          <a [routerLink]="['/', workspace.path]" routerLinkActive="active" ariaCurrentWhenActive="page">{{ workspace.title }}</a>
+        }
+      }
+    }
+  </nav>
+</aside>
+<main>
+  <header>
+    <div class="market"><strong>{{ context.market().region }} · {{ context.market().ruleset }} · {{ context.market().faction }}</strong><small>No market snapshot available</small></div>
+    <button disabled title="Synchronization is not implemented yet">Refresh</button>
+    <select aria-label="Character" disabled><option>No character</option></select>
+  </header>
+  <app-error-notice />
+  <div id="workspace" tabindex="-1"><router-outlet /></div>
+</main>

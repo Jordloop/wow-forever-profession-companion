@@ -1,6 +1,38 @@
-
 # Private project documentation
 /docs/private/
+/docs.zip
+/private*.zip
+/.github/copilot-instructions.md
 
-# Private project documentation
-/docs/private/
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+
+# Java and Maven
+/backend/target/
+/backend/logs/
+*.class
+
+# Angular and Node.js
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.angular/
+/frontend/coverage/
+/frontend/test-results/
+/frontend/playwright-report/
+
+# IDE configuration
+.idea/
+.vscode/
+*.iml
+
+# Logs and diagnostics
+*.log
+/logs/
+/diagnostics/
+/backups/
+
+# Operating system files
+.DS_Store
+Thumbs.db

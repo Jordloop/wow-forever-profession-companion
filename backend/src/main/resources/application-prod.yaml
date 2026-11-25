@@ -1,0 +1,9 @@
+logging:
+  file:
+    name: ${LOG_FILE:/app/logs/profession-companion.log}
+  structured:
+    format:
+      console: logstash
+app:
+  security:
+    development-proxy-origins: []

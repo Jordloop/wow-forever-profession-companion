@@ -1,0 +1,122 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend verification
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      SPRING_PROFILES_ACTIVE: prod
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+      - name: Set Dependency-Check cache date
+        id: dependency-check-cache-date
+        run: echo "date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+      - name: Cache Maven Wrapper distribution
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.m2/wrapper/dists
+          key: maven-wrapper-${{ runner.os }}-${{ hashFiles('backend/.mvn/wrapper/maven-wrapper.properties') }}
+      - name: Cache OWASP Dependency-Check database
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.m2/dependency-check-data
+          key: dependency-check-${{ runner.os }}-12.2.2-${{ steps.dependency-check-cache-date.outputs.date }}
+          restore-keys: |
+            dependency-check-${{ runner.os }}-12.2.2-
+      - name: Migrate existing Dependency-Check database
+        run: |
+          if [ ! -d ~/.m2/dependency-check-data ] && [ -d ~/.m2/repository/dependency-check-data ]; then
+            cp -a ~/.m2/repository/dependency-check-data ~/.m2/dependency-check-data
+          fi
+      - name: Bootstrap Maven Wrapper with bounded retries
+        timeout-minutes: 3
+        run: sh ../scripts/retry-maven.sh ./mvnw -B -version
+      - name: Run backend tests and shipped-dependency vulnerability analysis
+        timeout-minutes: 50
+        run: ./mvnw -B clean verify -Pdependency-check
+
+  frontend:
+    name: Frontend verification
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.22.3
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+      - name: Audit frontend dependencies
+        run: npm audit --audit-level=high
+      - name: Run frontend unit tests
+        run: npm test -- --watch=false
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run browser tests
+        run: npm run test:e2e
+      - name: Build frontend for production
+        run: npm run build
+
+  dependency-review:
+    name: Dependency vulnerability review
+    if: github.event_name == 'pull_request'
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/dependency-review-action@bbc44d14a204704ccc493733616cd1e93a0321ec # v5.0.1
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: never
+
+  production-image:
+    name: Production image build
+    needs:
+      - backend
+      - frontend
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build production image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          push: false
+          load: true
+          tags: wow-forever-profession-companion:ci
+          cache-from: type=gha,scope=production-image,timeout=3m
+          cache-to: type=gha,mode=max,scope=production-image,timeout=3m,ignore-error=true
