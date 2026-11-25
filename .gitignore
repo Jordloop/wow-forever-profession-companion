@@ -28,6 +28,7 @@
 *.log
 /logs/
 /diagnostics/
+/backups/
 
 # Operating system files
 .DS_Store

@@ -83,6 +83,68 @@ the first write; keep writes on unsafe HTTP methods and use Angular's
 `HttpClient` with relative URLs so its XSRF support applies. Do not disable CSRF
 for API routes.
 
+## Run with Docker Compose
+
+Docker Engine and Docker Compose v2 are required. If `.env` does not already
+exist, create it from `.env.example`, then replace the database password
+placeholder with a locally generated password. Keep `.env` private and do not
+overwrite an existing `.env` with the example file.
+
+From the repository root, start the production-profile application and database:
+
+```powershell
+docker compose up -d --build --wait
+```
+
+Open `http://127.0.0.1:8083`. The app port is published only on loopback; change
+`APP_PORT` in `.env` if that host port is already in use. PostgreSQL has no
+published host port. Spring serves both the Angular application and backend
+from the same origin. The production container runs as a non-root user and
+waits for the database health check before starting.
+
+Check service health with `docker compose ps` and follow structured application
+logs with `docker compose logs -f app`. The database data is stored in the
+`postgres-data` named volume; rotating application files are stored in the
+`application-logs` named volume. Rebuilding/replacing containers preserves
+these volumes. `docker compose down` preserves them; do not use `docker compose
+down -v` for normal updates because it deletes persistent data and logs.
+
+To update after obtaining newer source, back up the database before applying a
+release that may include destructive schema changes, then run
+`docker compose up -d --build --wait`. Flyway applies migrations during app
+startup. Compose keeps the named database volume across app image updates.
+
+### Database backup and restore
+
+Backups contain local application data and are ignored by Git. Create a
+PostgreSQL custom-format backup from PowerShell:
+
+```powershell
+New-Item -ItemType Directory -Force .\backups | Out-Null
+$backup = "backups\wowcompanion-$(Get-Date -Format yyyyMMdd-HHmmss).dump"
+cmd.exe /d /c "docker compose exec -T db pg_dump -Fc -U wowcompanion wowcompanion > $backup"
+if ($LASTEXITCODE -ne 0) { throw "Database backup failed." }
+```
+
+Validate a backup before relying on it:
+
+```powershell
+cmd.exe /d /c "docker compose exec -T db pg_restore --list < $backup"
+if ($LASTEXITCODE -ne 0) { throw "Database backup validation failed." }
+```
+
+Restoring with `pg_restore --clean` replaces objects in the target database and
+is destructive. First make and validate a separate backup of the current
+database, stop the app, and verify the target and backup paths. Only then run:
+
+```powershell
+cmd.exe /d /c "docker compose exec -T db pg_restore --clean --if-exists --exit-on-error --single-transaction -U wowcompanion -d wowcompanion < $backup"
+if ($LASTEXITCODE -ne 0) { throw "Database restore failed." }
+docker compose up -d --wait
+```
+
+Do not delete the named database volume as part of routine recovery or updates.
+
 ## Disclaimer
 
 This is an independent, non-commercial project and is not
