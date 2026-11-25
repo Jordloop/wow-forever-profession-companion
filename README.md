@@ -89,7 +89,7 @@ From `frontend`, install the Chromium browser once and run the Playwright
 end-to-end suite:
 
 ```powershell
-npm ci
+npm ci --ignore-scripts
 npx playwright install chromium
 npm run test:e2e
 ```
