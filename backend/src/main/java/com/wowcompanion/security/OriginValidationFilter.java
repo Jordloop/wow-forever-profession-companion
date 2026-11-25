@@ -2,6 +2,7 @@ package com.wowcompanion.security;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.Enumeration;
 import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -15,6 +16,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 final class OriginValidationFilter extends OncePerRequestFilter {
     private static final Set<String> SAFE_METHODS = Set.of("GET", "HEAD", "OPTIONS", "TRACE");
+    private static final Set<String> TRUSTED_HOSTS = Set.of("localhost", "127.0.0.1", "::1");
 
     private final Set<String> developmentProxyOrigins;
     private final SecurityProblemWriter problemWriter;
@@ -32,6 +34,11 @@ final class OriginValidationFilter extends OncePerRequestFilter {
             HttpServletRequest request,
             HttpServletResponse response,
             FilterChain filterChain) throws ServletException, IOException {
+        if (!isTrustedHost(request)) {
+            problemWriter.writeForbidden(request, response);
+            return;
+        }
+
         String method = request.getMethod().toUpperCase(Locale.ROOT);
         if (SAFE_METHODS.contains(method)) {
             filterChain.doFilter(request, response);
@@ -51,10 +58,84 @@ final class OriginValidationFilter extends OncePerRequestFilter {
 
     private static String normalizeConfiguredOrigin(String origin) {
         String normalized = normalizeOrigin(origin);
-        if (normalized == null) {
+        if (normalized == null || !isTrustedHost(originHost(origin))) {
             throw new IllegalArgumentException("Invalid development proxy origin configured.");
         }
         return normalized;
+    }
+
+    private static boolean isTrustedHost(HttpServletRequest request) {
+        Enumeration<String> hostHeaders = request.getHeaders(HttpHeaders.HOST);
+        if (hostHeaders == null || !hostHeaders.hasMoreElements()) {
+            return false;
+        }
+        String host = normalizeHost(hostHeaders.nextElement());
+        return host != null
+                && !hostHeaders.hasMoreElements()
+                && isTrustedHost(host);
+    }
+
+    private static boolean isTrustedHost(String host) {
+        return TRUSTED_HOSTS.contains(host) || isIpv4Loopback(host);
+    }
+
+    private static String originHost(String value) {
+        try {
+            URI origin = URI.create(value);
+            return normalizeHost(origin.getRawAuthority());
+        } catch (IllegalArgumentException exception) {
+            return null;
+        }
+    }
+
+    private static String normalizeHost(String authority) {
+        if (!StringUtils.hasText(authority)) {
+            return null;
+        }
+        try {
+            URI hostUri = URI.create("http://" + authority);
+            if (hostUri.getHost() == null
+                    || hostUri.getRawUserInfo() != null
+                    || (hostUri.getRawPath() != null && !hostUri.getRawPath().isEmpty())
+                    || hostUri.getRawQuery() != null
+                    || hostUri.getRawFragment() != null
+                    || hostUri.getPort() == 0
+                    || hostUri.getPort() > 65535
+                    || (hostUri.getPort() == -1 && authority.endsWith(":"))) {
+                return null;
+            }
+            String host = hostUri.getHost().toLowerCase(Locale.ROOT);
+            if (host.startsWith("[") && host.endsWith("]")) {
+                host = host.substring(1, host.length() - 1);
+            }
+            return host;
+        } catch (IllegalArgumentException exception) {
+            return null;
+        }
+    }
+
+    private static boolean isIpv4Loopback(String host) {
+        String[] octets = host.split("\\.", -1);
+        if (octets.length != 4) {
+            return false;
+        }
+        try {
+            if (Integer.parseInt(octets[0]) != 127) {
+                return false;
+            }
+            for (String octet : octets) {
+                if (!octet.matches("0|[1-9][0-9]{0,2}")) {
+                    return false;
+                }
+                int value = Integer.parseInt(octet);
+                if (value < 0 || value > 255) {
+                    return false;
+                }
+            }
+            return true;
+        } catch (NumberFormatException exception) {
+            return false;
+        }
     }
 
     private static String normalizeOrigin(String value) {

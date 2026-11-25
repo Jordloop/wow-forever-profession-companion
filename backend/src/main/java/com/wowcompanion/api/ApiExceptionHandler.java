@@ -3,8 +3,11 @@ package com.wowcompanion.api;
 import com.wowcompanion.logging.RequestCorrelationFilter;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -112,13 +115,25 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Object> handleUnexpectedException(Exception exception, WebRequest request) {
-        logger.error("Unexpected request failure", exception);
+        logger.error("Unexpected request failure: {}", safeExceptionDiagnostics(exception));
 
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
         ProblemDetail problem = ProblemDetail.forStatus(status);
         problem.setTitle("Internal Server Error");
         problem.setDetail(publicDetail(status));
         return createResponseEntity(problem, HttpHeaders.EMPTY, status, request);
+    }
+
+    private static List<String> safeExceptionDiagnostics(Throwable exception) {
+        List<String> details = new ArrayList<>();
+        Set<Throwable> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (Throwable current = exception; current != null && visited.add(current); current = current.getCause()) {
+            details.add("exception=" + current.getClass().getName());
+            for (StackTraceElement frame : current.getStackTrace()) {
+                details.add("at " + frame.getClassName() + "#" + frame.getMethodName() + ":" + frame.getLineNumber());
+            }
+        }
+        return List.copyOf(details);
     }
 
     private static ValidationError toValidationError(FieldError error) {

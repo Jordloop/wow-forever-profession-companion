@@ -57,7 +57,10 @@ and metrics are served on loopback port 8082 under `/actuator/health`,
 `/actuator/info`, and `/actuator/metrics`. Health component details are
 hidden. API failures use RFC 9457 Problem Details with a correlation ID;
 validation responses omit rejected values, and unexpected errors return
-sanitized details. The frontend displays safe guidance and the diagnostic ID.
+sanitized details. Unexpected-error logs retain exception types and stack
+locations without logging exception messages or response bodies. The frontend
+displays safe guidance and a diagnostic ID; client-generated IDs use a
+`client-` prefix to distinguish them from server correlation IDs.
 
 ## Request security
 
@@ -71,11 +74,13 @@ correlation ID.
 
 Development allows only the configured Angular dev-server origins
 `http://localhost:4200` and `http://127.0.0.1:4200` in addition to the request's
-own origin. The `prod` profile removes those development exceptions and accepts
-only the request's same origin. Do not enable wildcard CORS or add cross-origin
-production access. The approved production deployment serves the Angular assets
-and API from the same origin; keep its published app and database ports
-loopback-only.
+own origin. Every request, including safe reads, must also use an explicitly
+trusted `Host` (`localhost` or a canonical loopback address); an `Origin` header
+cannot make an untrusted host acceptable. The `prod` profile removes the
+development-origin exceptions and accepts only the request's same origin. Do
+not enable wildcard CORS or add cross-origin production access. The approved
+production deployment serves the Angular assets and API from the same origin;
+keep its published app and database ports loopback-only.
 
 There are no production write endpoints yet. The security integration tests
 use test-only routes. Future API reads should establish the CSRF cookie before
@@ -85,19 +90,24 @@ for API routes.
 
 ## Browser tests
 
-From `frontend`, install the Chromium browser once and run the Playwright
-end-to-end suite:
+From `frontend`, install the Chromium browser once and run the unit and
+Playwright end-to-end suites:
 
 ```powershell
 npm ci --ignore-scripts
 npx playwright install chromium
+npm test
 npm run test:e2e
 ```
 
-The test runner starts and stops its own Angular development server on
-`127.0.0.1:4317`. The browser tests cover workspace navigation, direct route
-loads and the current disabled placeholder controls; they use no backend,
-provider or live account data.
+The end-to-end suite requires Docker Engine and Compose v2. It starts an
+isolated test-only database and backend with no persistent volumes, plus an
+Angular development server. Playwright tests both the production-Compose
+origin and the development-proxy origin, including real browser CSRF cookie and
+header exchange and invalid-token rejection. Shell checks cover workspace
+navigation, direct route loads, keyboard skip navigation, responsive layout and
+the current disabled placeholder controls. The test routes are enabled only in
+the browser-test profile; the suite uses no provider or live account data.
 
 ## Run with Docker Compose
 

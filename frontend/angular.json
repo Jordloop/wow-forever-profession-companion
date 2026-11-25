@@ -53,6 +53,17 @@
                                                                                                                  "optimization":  false,
                                                                                                                  "extractLicenses":  false,
                                                                                                                  "sourceMap":  true
+                                                                                                             },
+                                                                                             "e2e":  {
+                                                                                                         "fileReplacements":  [
+                                                                                                                                  {
+                                                                                                                                      "replace":  "src/main.ts",
+                                                                                                                                      "with":  "src/main.e2e.ts"
+                                                                                                                                  }
+                                                                                                                              ],
+                                                                                                         "optimization":  false,
+                                                                                                         "extractLicenses":  false,
+                                                                                                         "sourceMap":  true
                                                                                                              }
                                                                                          },
                                                                       "defaultConfiguration":  "production"
@@ -65,6 +76,9 @@
                                                                                                             },
                                                                                              "development":  {
                                                                                                                  "buildTarget":  "frontend:build:development"
+                                                                                                             },
+                                                                                             "e2e":  {
+                                                                                                         "buildTarget":  "frontend:build:e2e"
                                                                                                              }
                                                                                          },
                                                                       "defaultConfiguration":  "development",

@@ -8,6 +8,10 @@ import java.net.http.HttpResponse;
 import java.util.Arrays;
 import java.util.UUID;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.wowcompanion.security.SecurityProperties;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
@@ -30,6 +34,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.slf4j.LoggerFactory;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
@@ -38,6 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Testcontainers
@@ -93,6 +99,18 @@ class DatabaseIntegrationTest {
     }
 
     @Test
+    void keepsBrowserSecurityTestEndpointsDisabledOutsideTheirTestProfile()
+            throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder(URI.create(
+                        "http://127.0.0.1:" + serverPort + "/api/test-security/csrf"))
+                .GET()
+                .build();
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        assertEquals(404, response.statusCode());
+    }
+
+    @Test
     void returnsServerGeneratedCorrelationIdForApiRequests() throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + serverPort + "/"))
                 .header("X-Correlation-ID", "caller-supplied-value")
@@ -138,11 +156,24 @@ class DatabaseIntegrationTest {
 
     @Test
     void sanitizesUnexpectedErrorsAndReturnsCorrelationId() throws IOException, InterruptedException {
-        HttpRequest request = HttpRequest.newBuilder(
-                        URI.create("http://127.0.0.1:" + serverPort + "/test-errors/unexpected"))
-                .GET()
-                .build();
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        Logger logger = (Logger) LoggerFactory.getLogger("com.wowcompanion.api.ApiExceptionHandler");
+        Level previousLevel = logger.getLevel();
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        HttpResponse<String> response;
+        try {
+            logger.setLevel(Level.ERROR);
+            HttpRequest request = HttpRequest.newBuilder(
+                            URI.create("http://127.0.0.1:" + serverPort + "/test-errors/unexpected"))
+                    .GET()
+                    .build();
+            response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        } finally {
+            logger.detachAppender(appender);
+            logger.setLevel(previousLevel);
+            appender.stop();
+        }
 
         String correlationId = response.headers().firstValue("X-Correlation-ID").orElse(null);
         assertEquals(500, response.statusCode());
@@ -153,7 +184,26 @@ class DatabaseIntegrationTest {
         assertTrue(response.body().contains("\"instance\":\"/test-errors/unexpected\""));
         assertTrue(response.body().contains("\"correlationId\":\"" + correlationId + "\""));
         assertTrue(response.body().contains("An unexpected server error occurred."));
-        assertFalse(response.body().contains("private-test-detail"));
+        assertFalse(response.body().contains("synthetic-password"));
+        assertFalse(response.body().contains("synthetic-access-token"));
+        assertFalse(response.body().contains("synthetic-url-token"));
+        assertFalse(response.body().contains("provider.example"));
+        assertFalse(response.body().contains("access_token"));
+        assertFalse(response.body().contains("synthetic-provider-body"));
+
+        assertEquals(1, appender.list.size());
+        ILoggingEvent logEvent = appender.list.getFirst();
+        String logMessage = logEvent.getFormattedMessage();
+        assertTrue(logMessage.contains("IllegalStateException"));
+        assertTrue(logMessage.contains("IllegalArgumentException"));
+        assertTrue(logMessage.contains("ErrorRoutes#fail"));
+        assertFalse(logMessage.contains("synthetic-password"));
+        assertFalse(logMessage.contains("synthetic-access-token"));
+        assertFalse(logMessage.contains("synthetic-url-token"));
+        assertFalse(logMessage.contains("provider.example"));
+        assertFalse(logMessage.contains("access_token"));
+        assertFalse(logMessage.contains("synthetic-provider-body"));
+        assertNull(logEvent.getThrowableProxy());
     }
 
     @Test
@@ -321,7 +371,11 @@ class DatabaseIntegrationTest {
 
         @GetMapping("/unexpected")
         void fail() {
-            throw new IllegalStateException("private-test-detail");
+            throw new IllegalStateException(
+                    "password=synthetic-password authorization=Bearer synthetic-access-token "
+                            + "url=https://provider.example/items?access_token=synthetic-url-token "
+                            + "body={\"payload\":\"synthetic-provider-body\"}",
+                    new IllegalArgumentException("synthetic-provider-body in nested cause"));
         }
     }
 

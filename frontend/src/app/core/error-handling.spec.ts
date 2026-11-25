@@ -1,4 +1,9 @@
-import { HttpClient, HttpErrorResponse, provideHttpClient, withInterceptors } from '@angular/common/http';
+import {
+  HttpClient,
+  HttpErrorResponse,
+  provideHttpClient,
+  withInterceptors,
+} from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -24,7 +29,7 @@ describe('Application error handling', () => {
     const notices = TestBed.inject(ErrorNoticeService);
     let receivedError: unknown;
 
-    client.get('/api/example').subscribe({ error: error => receivedError = error });
+    client.get('/api/example').subscribe({ error: (error) => (receivedError = error) });
     requests.expectOne('/api/example').flush(
       { detail: 'private server detail', correlationId: '01234567-89ab-cdef-0123-456789abcdef' },
       {
@@ -36,7 +41,8 @@ describe('Application error handling', () => {
 
     expect(receivedError).toBeInstanceOf(HttpErrorResponse);
     expect(notices.notice()).toEqual({
-      message: 'A server error occurred. Try again. Provide this diagnostic ID if the problem continues.',
+      message:
+        'A server error occurred. Try again. Provide this diagnostic ID if the problem continues.',
       diagnosticId: '01234567-89ab-cdef-0123-456789abcdef',
     });
 
@@ -57,6 +63,9 @@ describe('Application error handling', () => {
 
     expect(notices.notice()?.message).toContain('server could not be reached');
     expect(notices.notice()?.diagnosticId).toMatch(
+      /^client-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+    );
+    expect(notices.notice()?.diagnosticId).not.toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
     );
   });
@@ -73,7 +82,7 @@ describe('Application error handling', () => {
     expect(log.mock.calls[0].join(' ')).not.toContain('private client detail');
     expect(notices.notice()?.message).toContain('unexpected application error');
     expect(notices.notice()?.diagnosticId).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+      /^client-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
     );
   });
 });

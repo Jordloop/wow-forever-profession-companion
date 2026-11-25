@@ -2,6 +2,7 @@
 /docs/private/
 /docs.zip
 /private*.zip
+/.github/copilot-instructions.md
 
 # Local configuration and credentials
 .env

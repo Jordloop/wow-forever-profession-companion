@@ -20,11 +20,12 @@ export class ErrorNoticeService {
   }
 
   reportUnexpectedFailure(error: unknown): void {
-    const diagnosticId = crypto.randomUUID();
+    const diagnosticId = newClientDiagnosticId();
     const category = errorCategory(error);
     console.error(`Unhandled application error (${diagnosticId}): ${category}`);
     this.currentNotice.set({
-      message: 'An unexpected application error occurred. Provide this diagnostic ID if the problem continues.',
+      message:
+        'An unexpected application error occurred. Provide this diagnostic ID if the problem continues.',
       diagnosticId,
     });
   }
@@ -77,11 +78,17 @@ function diagnosticIdFor(error: HttpErrorResponse): string {
     return headerId;
   }
   const bodyId = correlationIdFrom(error.error);
-  return isCorrelationId(bodyId) ? bodyId : crypto.randomUUID();
+  return isCorrelationId(bodyId) ? bodyId : newClientDiagnosticId();
 }
 
 function isCorrelationId(value: string | null): value is string {
-  return value !== null && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+  return (
+    value !== null && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+  );
+}
+
+function newClientDiagnosticId(): string {
+  return `client-${crypto.randomUUID()}`;
 }
 
 function correlationIdFrom(body: unknown): string | null {
